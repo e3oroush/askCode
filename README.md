@@ -101,3 +101,10 @@ Contributions are welcome! To get started with development:
 ### Test Framework
 
 The project uses `mini.nvim` for its testing framework. You can find more information about it in the [mini.nvim TESTING.md](https://github.com/nvim-mini/mini.nvim/blob/main/TESTING.md) file.
+
+## Todo
+
+- [ ] **Integrate AmazonQ Agent**: Add a new agent for AmazonQ by implementing the `prepare_command` function for its CLI.
+- [ ] **Support Streaming JSON**: Improve the stream processor to parse chunked JSON responses for real-time display.
+- [ ] **Support Follow-up Questions**: Maintain conversation history to allow for follow-up questions.
+- [ ] **Support Prompt Templates**: Allow users to define custom prompt templates in the configuration.
