@@ -1,5 +1,3 @@
--- lua/askCode/agents/gemini.lua
-
 local M = {
   config = {},
 }
@@ -23,7 +21,7 @@ end
 --- Parses the JSON response from the Gemini CLI.
 --- @param json_string string The JSON string to parse.
 --- @return string? The extracted response, or nil if parsing fails.
-local function parse_response(json_string)
+function M.parse_response(json_string)
   -- vim.fn.json_decode is not safe, so we need to wrap it in a pcall
   local ok, decoded = pcall(vim.fn.json_decode, json_string)
   if not ok or type(decoded) ~= "table" or not decoded.response then
@@ -51,7 +49,7 @@ function M.ask(prompt)
   handle:close()
 
   if result and result ~= "" then
-    return parse_response(result)
+    return M.parse_response(result)
   end
 
   return nil

@@ -38,32 +38,72 @@ function M.ask(question, mode)
   if config.current_config.debug then
     vim.notify("Running command: " .. command)
   end
-  local partial_line = ""
 
-  local on_stdout = function(_, data, _)
-    if not data or #data == 0 then
-      return
+  if config.current_config.output_format == "json" and agent.parse_response then
+    local all_lines = {}
+    local partial_line = ""
+
+    local on_stdout = function(_, data, _)
+      if not data or #data == 0 then
+        return
+      end
+
+      data[1] = partial_line .. data[1]
+      partial_line = ""
+
+      if #data > 0 then
+        partial_line = table.remove(data)
+      end
+
+      if #data > 0 then
+        vim.list_extend(all_lines, data)
+      end
     end
 
-    data[1] = partial_line .. data[1]
-    partial_line = ""
+    local on_exit = function()
+      if partial_line ~= "" then
+        table.insert(all_lines, partial_line)
+      end
+      local full_response = table.concat(all_lines, "\n")
+      if full_response == "" then
+        return
+      end
 
-    if #data > 0 then
-      partial_line = table.remove(data)
+      local parsed_response = agent.parse_response(full_response)
+      if parsed_response then
+        local response_lines = vim.split(parsed_response, "\n")
+        ui.stream_text_to_window(response_lines)
+      else
+        ui.stream_text_to_window(all_lines)
+      end
+    end
+    runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit })
+  else
+    local partial_line = ""
+    local on_stdout = function(_, data, _)
+      if not data or #data == 0 then
+        return
+      end
+
+      data[1] = partial_line .. data[1]
+      partial_line = ""
+
+      if #data > 0 then
+        partial_line = table.remove(data)
+      end
+
+      if #data > 0 then
+        ui.stream_text_to_window(data)
+      end
     end
 
-    if #data > 0 then
-      ui.stream_text_to_window(data)
+    local on_exit = function()
+      if partial_line ~= "" then
+        ui.stream_text_to_window({ partial_line })
+      end
     end
+    runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit })
   end
-
-  local on_exit = function()
-    if partial_line ~= "" then
-      ui.stream_text_to_window({ partial_line })
-    end
-  end
-
-  runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit })
 end
 
 return M

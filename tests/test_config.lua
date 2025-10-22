@@ -27,12 +27,18 @@ T["config"] = new_set()
 -- If it produces error - test fails.
 T["config"]["default value"] = function()
   -- expected result
-  eq(child.lua_get([[require('askCode.config').current_config]]), { agent = "gemini", debug = false, quit_key = "q" })
+  eq(
+    child.lua_get([[require('askCode.config').current_config]]),
+    { agent = "gemini", debug = false, quit_key = "q", output_format = "json" }
+  )
 end
 
 T["config"]["custom value"] = function()
   child.lua([[M.setup({agent="q"})]])
-  eq(child.lua_get([[require('askCode.config').current_config]]), { agent = "q", debug = false, quit_key = "q" })
+  eq(
+    child.lua_get([[require('askCode.config').current_config]]),
+    { agent = "q", debug = false, quit_key = "q", output_format = "json" }
+  )
 end
 
 return T

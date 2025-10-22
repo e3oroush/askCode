@@ -2,6 +2,7 @@
 ---@field agent string
 ---@field debug boolean
 ---@field quit_key string
+---@field output_format string
 
 local M = {}
 
@@ -10,6 +11,7 @@ M.default = {
   agent = "gemini",
   debug = false,
   quit_key = "q",
+  output_format = "json",
 }
 
 --- updates config
