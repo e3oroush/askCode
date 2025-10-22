@@ -32,12 +32,12 @@ T["prepare_command"] = new_set()
 
 T["prepare_command"]["should return correct command for simple prompt"] = function()
   local command = child.lua_get([[Agent.prepare_command('hello')]])
-  eq(command, "echo 'hello' | gemini")
+  eq(command, "echo 'hello' | gemini --output-format json")
 end
 
 T["prepare_command"]["should handle special characters in prompt"] = function()
   local command = child.lua_get([[Agent.prepare_command("a'b;c")]])
-  eq(command, [[echo 'a'\''b;c' | gemini]])
+  eq(command, [[echo 'a'\''b;c' | gemini --output-format json]])
 end
 
 -- Test set for the 'ask' function
@@ -52,7 +52,7 @@ T["ask"]["should return mocked output on success"] = function()
         error(string.format("Unexpected command. Got: '%s', Expected: '%s'", command, expected_command))
       end
       return {
-        read = function() return "mocked response" end,
+        read = function() return '{"response": "mocked response"}' end,
         close = function() end,
       }
     end
