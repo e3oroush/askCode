@@ -12,6 +12,38 @@ function M.setup(cfg)
   config.merge_with_default(cfg)
 end
 
+local function _create_stream_processor(current_config, agent)
+  if current_config.output_format == "json" and agent.parse_response then
+    -- JSON processor
+    local all_lines = {}
+    return {
+      handle_data = function(lines)
+        vim.list_extend(all_lines, lines)
+      end,
+      handle_exit = function()
+        local full_response = table.concat(all_lines, "\n")
+        if full_response == "" then
+          return
+        end
+        local parsed = agent.parse_response(full_response)
+        if parsed then
+          ui.stream_text_to_window(vim.split(parsed, "\n"))
+        else
+          ui.stream_text_to_window(all_lines)
+        end
+      end,
+    }
+  else
+    -- Plain text processor
+    return {
+      handle_data = function(lines)
+        ui.stream_text_to_window(lines)
+      end,
+      handle_exit = function() end,
+    }
+  end
+end
+
 --- @param question string The question to ask.
 function M.ask(question, mode)
   local buffer_content = utils.get_buffer_content(mode)
@@ -39,71 +71,34 @@ function M.ask(question, mode)
     vim.notify("Running command: " .. command)
   end
 
-  if config.current_config.output_format == "json" and agent.parse_response then
-    local all_lines = {}
-    local partial_line = ""
+  local processor = _create_stream_processor(config.current_config, agent)
 
-    local on_stdout = function(_, data, _)
-      if not data or #data == 0 then
-        return
-      end
-
-      data[1] = partial_line .. data[1]
-      partial_line = ""
-
-      if #data > 0 then
-        partial_line = table.remove(data)
-      end
-
-      if #data > 0 then
-        vim.list_extend(all_lines, data)
-      end
+  local partial_line = ""
+  local on_stdout = function(_, data, _)
+    if not data or #data == 0 then
+      return
     end
 
-    local on_exit = function()
-      if partial_line ~= "" then
-        table.insert(all_lines, partial_line)
-      end
-      local full_response = table.concat(all_lines, "\n")
-      if full_response == "" then
-        return
-      end
+    data[1] = partial_line .. data[1]
+    partial_line = ""
 
-      local parsed_response = agent.parse_response(full_response)
-      if parsed_response then
-        local response_lines = vim.split(parsed_response, "\n")
-        ui.stream_text_to_window(response_lines)
-      else
-        ui.stream_text_to_window(all_lines)
-      end
-    end
-    runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit })
-  else
-    local partial_line = ""
-    local on_stdout = function(_, data, _)
-      if not data or #data == 0 then
-        return
-      end
-
-      data[1] = partial_line .. data[1]
-      partial_line = ""
-
-      if #data > 0 then
-        partial_line = table.remove(data)
-      end
-
-      if #data > 0 then
-        ui.stream_text_to_window(data)
-      end
+    if #data > 0 then
+      partial_line = table.remove(data)
     end
 
-    local on_exit = function()
-      if partial_line ~= "" then
-        ui.stream_text_to_window({ partial_line })
-      end
+    if #data > 0 then
+      processor.handle_data(data)
     end
-    runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit })
   end
+
+  local on_exit = function()
+    if partial_line ~= "" then
+      processor.handle_data({ partial_line })
+    end
+    processor.handle_exit()
+  end
+
+  runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit })
 end
 
 return M
