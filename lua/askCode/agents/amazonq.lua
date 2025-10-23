@@ -27,7 +27,9 @@ function M.parse_response(response_string)
     vim.notify("Empty response from AmazonQ", vim.log.levels.ERROR)
     return nil
   end
-  return response_string
+  -- Strip ANSI escape codes
+  local cleaned = response_string:gsub("\27%[[0-9;]*m", "")
+  return cleaned
 end
 
 --- Sends a prompt to the AmazonQ CLI and returns the response.

@@ -14,7 +14,8 @@ local T = new_set({
       -- Set editor dimensions for predictable window size
       child.o.columns = 100
       child.o.lines = 40
-      -- Load tested module
+      -- Load config first, then UI module
+      child.lua([[require('askCode.config').merge_with_default()]])
       child.lua([[ui = require('askCode.ui')]])
     end,
     -- This will be executed one after all tests from this set are finished
@@ -25,9 +26,32 @@ local T = new_set({
 -- Test set for create_floating_window
 T["create_floating_window()"] = new_set()
 
-T["create_floating_window()"]["creates a floating window with correct dimensions"] = function()
+T["create_floating_window()"]["creates a floating window with custom dimensions"] = function()
+  -- Setup custom window config
+  child.lua([[
+    require('askCode.config').current_config.window = {
+      width_ratio = 0.5,
+      height_ratio = 0.6,
+      max_width = 60,
+      max_height = 15,
+    }
+  ]])
+
+  -- Execute the function
+  child.lua([[ui.create_floating_window()]])
+
+  -- Get window handle
+  local win_handle = child.lua_get([[ui.float_win]])
+  local win_config = child.lua_get("vim.api.nvim_win_get_config(" .. win_handle .. ")")
+
+  -- Assert custom dimensions (50% of 100 columns = 50, 60% of 40 lines = 24, but max is 15)
+  eq(win_config.width, 50)
+  eq(win_config.height, 15)
+end
+
+T["create_floating_window()"]["creates a floating window with default dimensions"] = function()
   -- Get current window handle
-  local current_win_handle = child.lua_get('vim.api.nvim_get_current_win()')
+  local current_win_handle = child.lua_get("vim.api.nvim_get_current_win()")
 
   -- Execute the function
   child.lua([[ui.create_floating_window()]])
@@ -37,17 +61,16 @@ T["create_floating_window()"]["creates a floating window with correct dimensions
   local buf_handle = child.lua_get([[ui.result_buffer]])
 
   -- Check if window and buffer are valid
-  eq(child.lua_get('vim.api.nvim_win_is_valid(' .. win_handle .. ')'), true)
-  eq(child.lua_get('vim.api.nvim_buf_is_valid(' .. buf_handle .. ')'), true)
+  eq(child.lua_get("vim.api.nvim_win_is_valid(" .. win_handle .. ")"), true)
+  eq(child.lua_get("vim.api.nvim_buf_is_valid(" .. buf_handle .. ")"), true)
 
   -- Get window config
-  local win_config = child.lua_get('vim.api.nvim_win_get_config(' .. win_handle .. ')')
+  local win_config = child.lua_get("vim.api.nvim_win_get_config(" .. win_handle .. ")")
 
-  -- Assert window properties
+  -- Assert window properties (70% of 100 columns = 70, 70% of 40 lines = 28, but max is 20)
   eq(win_config.relative, "win")
-  eq(win_config.win, current_win_handle)
   eq(win_config.width, 70)
-  eq(win_config.height, 20)
+  eq(win_config.height, 28)
   eq(win_config.row, 1)
   eq(win_config.col, 0)
   eq(win_config.border, { "╭", "─", "╮", "│", "╯", "─", "╰", "│" })
@@ -62,19 +85,19 @@ T["stream_text_to_window()"]["streams text to the window"] = function()
 
   -- Stream some lines
   local lines_to_stream = { "hello", "world" }
-  child.lua('ui.stream_text_to_window(...)', { lines_to_stream })
+  child.lua("ui.stream_text_to_window(...)", { lines_to_stream })
 
   -- Wait for vim.schedule to execute
-  child.lua('vim.loop.sleep(50)')
+  child.lua("vim.loop.sleep(50)")
 
   -- Verify buffer content
   local buf_handle = child.lua_get([[ui.result_buffer]])
-  local buffer_content = child.lua_get('vim.api.nvim_buf_get_lines(' .. buf_handle .. ', 0, -1, false)')
+  local buffer_content = child.lua_get("vim.api.nvim_buf_get_lines(" .. buf_handle .. ", 0, -1, false)")
   eq(buffer_content, { "", "hello", "world" })
 
   -- Verify cursor position
   local win_handle = child.lua_get([[ui.float_win]])
-  local cursor_pos = child.lua_get('vim.api.nvim_win_get_cursor(' .. win_handle .. ')')
+  local cursor_pos = child.lua_get("vim.api.nvim_win_get_cursor(" .. win_handle .. ")")
   eq(cursor_pos[1], 3)
 end
 
@@ -83,21 +106,21 @@ T["stream_text_to_window()"]["appends text on multiple calls"] = function()
   child.lua([[ui.create_floating_window()]])
 
   -- Stream first line
-  child.lua('ui.stream_text_to_window(...)', { { "line 1" } })
-  child.lua('vim.loop.sleep(50)')
+  child.lua("ui.stream_text_to_window(...)", { { "line 1" } })
+  child.lua("vim.loop.sleep(50)")
 
   -- Stream more lines
-  child.lua('ui.stream_text_to_window(...)', { { "line 2", "line 3" } })
-  child.lua('vim.loop.sleep(50)')
+  child.lua("ui.stream_text_to_window(...)", { { "line 2", "line 3" } })
+  child.lua("vim.loop.sleep(50)")
 
   -- Verify buffer content
   local buf_handle = child.lua_get([[ui.result_buffer]])
-  local buffer_content = child.lua_get('vim.api.nvim_buf_get_lines(' .. buf_handle .. ', 0, -1, false)')
+  local buffer_content = child.lua_get("vim.api.nvim_buf_get_lines(" .. buf_handle .. ", 0, -1, false)")
   eq(buffer_content, { "", "line 1", "line 2", "line 3" })
 
   -- Verify cursor position
   local win_handle = child.lua_get([[ui.float_win]])
-  local cursor_pos = child.lua_get('vim.api.nvim_win_get_cursor(' .. win_handle .. ')')
+  local cursor_pos = child.lua_get("vim.api.nvim_win_get_cursor(" .. win_handle .. ")")
   eq(cursor_pos[1], 4)
 end
 

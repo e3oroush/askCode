@@ -27,18 +27,34 @@ T["config"] = new_set()
 -- If it produces error - test fails.
 T["config"]["default value"] = function()
   -- expected result
-  eq(
-    child.lua_get([[require('askCode.config').current_config]]),
-    { agent = "gemini", debug = false, quit_key = "q", output_format = "json" }
-  )
+  eq(child.lua_get([[require('askCode.config').current_config]]), {
+    agent = "gemini",
+    debug = false,
+    quit_key = "q",
+    output_format = "json",
+    window = {
+      width_ratio = 0.7,
+      height_ratio = 0.7,
+      max_width = 240,
+      max_height = 60,
+    },
+  })
 end
 
 T["config"]["custom value"] = function()
   child.lua([[M.setup({agent="q"})]])
-  eq(
-    child.lua_get([[require('askCode.config').current_config]]),
-    { agent = "q", debug = false, quit_key = "q", output_format = "json" }
-  )
+  eq(child.lua_get([[require('askCode.config').current_config]]), {
+    agent = "q",
+    debug = false,
+    quit_key = "q",
+    output_format = "json",
+    window = {
+      width_ratio = 0.7,
+      height_ratio = 0.7,
+      max_width = 240,
+      max_height = 60,
+    },
+  })
 end
 
 return T

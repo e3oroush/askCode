@@ -3,17 +3,18 @@ local M = {}
 
 --- Creates a floating window relative to the cursor.
 -- The window is used to display results. The size of the window is
--- calculated to be 70% of the editor's dimensions, with a maximum
--- width of 80 columns and a maximum height of 20 lines.
+-- configurable through the window settings in the configuration.
 M.create_floating_window = function()
-  local width = math.floor(vim.o.columns * 0.7)
-  if width > 80 then
-    width = 80
+  local window_config = config.current_config.window
+  
+  local width = math.floor(vim.o.columns * window_config.width_ratio)
+  if width > window_config.max_width then
+    width = window_config.max_width
   end
 
-  local height = math.floor(vim.o.lines * 0.7)
-  if height > 20 then
-    height = 20
+  local height = math.floor(vim.o.lines * window_config.height_ratio)
+  if height > window_config.max_height then
+    height = window_config.max_height
   end
 
   local win_opts = {

@@ -3,6 +3,7 @@
 ---@field debug boolean
 ---@field quit_key string
 ---@field output_format string
+---@field window table
 
 local M = {}
 
@@ -12,6 +13,12 @@ M.default = {
   debug = false,
   quit_key = "q",
   output_format = "json",
+  window = {
+    width_ratio = 0.7,
+    height_ratio = 0.7,
+    max_width = 240,
+    max_height = 60,
+  },
 }
 
 --- updates config
