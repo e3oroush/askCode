@@ -6,6 +6,7 @@ local M = {}
 
 M.agents = {
   gemini = require("askCode.agents.gemini"),
+  amazonq = require("askCode.agents.amazonq"),
 }
 
 ---@param name string The name of the agent to get.

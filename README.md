@@ -25,7 +25,7 @@ Install `askCode.nvim` using your favorite package manager.
 
 ```lua
 {
-  "askCode/askCode.nvim",
+  "e3oroush/askCode",
   config = function()
     require("askCode").setup({
       -- Your configuration here
@@ -38,7 +38,7 @@ Install `askCode.nvim` using your favorite package manager.
 
 ```lua
 use {
-  "askCode/askCode.nvim",
+  "e3oroush/askCode",
   config = function()
     require("askCode").setup({
       -- Your configuration here
@@ -52,10 +52,11 @@ use {
 By default, `askCode.nvim` uses `gemini-cli`. You can configure it to use a different agent or customize its behavior.
 
 ```lua
--- lua/askCode/config.lua
 require("askCode").setup({
-  agent = "gemini", -- Or your preferred agent
-  },
+  agent = "gemini",        -- AI agent to use (default: "gemini")
+  debug = false,           -- Enable debug mode (default: false)
+  quit_key = "q",          -- Key to quit floating windows (default: "q")
+  output_format = "json",  -- Output format (default: "json")
 })
 ```
 
@@ -82,7 +83,7 @@ Contributions are welcome! To get started with development:
 1.  **Clone the repository**:
 
     ```sh
-    git clone https://github.com/askCode/askCode.nvim.git
+    git clone https://github.com/e3oroush/askCode.git askCode.nvim
     cd askCode.nvim
     ```
 
@@ -104,7 +105,7 @@ The project uses `mini.nvim` for its testing framework. You can find more inform
 
 ## Todo
 
-- [ ] **Integrate AmazonQ Agent**: Add a new agent for AmazonQ by implementing the `prepare_command` function for its CLI.
+- [x] **Integrate AmazonQ Agent**: Add a new agent for AmazonQ by implementing the `prepare_command` function for its CLI.
 - [ ] **Support Streaming JSON**: Improve the stream processor to parse chunked JSON responses for real-time display.
 - [ ] **Support Follow-up Questions**: Maintain conversation history to allow for follow-up questions.
 - [ ] **Support Prompt Templates**: Allow users to define custom prompt templates in the configuration.
