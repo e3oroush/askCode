@@ -1,12 +1,13 @@
 local config = require("askCode.config")
 local M = {}
 
---- Creates a floating window relative to the cursor.
--- The window is used to display results. The size of the window is
--- configurable through the window settings in the configuration.
-M.create_floating_window = function()
+--- Creates a floating window to show content.
+-- @param content string The content to display.
+-- @param on_close function A callback to execute when the window is closed.
+-- @return number, number The window ID and buffer ID.
+function M.show_in_float(content, on_close)
   local window_config = config.current_config.window
-  
+
   local width = math.floor(vim.o.columns * window_config.width_ratio)
   if width > window_config.max_width then
     width = window_config.max_width
@@ -26,37 +27,49 @@ M.create_floating_window = function()
     style = "minimal",
     border = "rounded",
   }
-  local result_buffer = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_set_option_value("filetype", "markdown", { buf = result_buffer })
-  local float_win = vim.api.nvim_open_win(result_buffer, true, win_opts)
-  M.float_win = float_win
-  M.result_buffer = result_buffer
-  vim.keymap.set("n", config.current_config.quit_key, "<cmd>quit<cr>", { buffer = M.result_buffer })
+  local buf_id = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf_id })
+
+  local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
+
+  -- Set content
+  vim.api.nvim_set_option_value("modifiable", true, { buf = buf_id })
+  vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, vim.split(content, "\n"))
+  vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
+
+  -- Keymap to close
+  vim.keymap.set("n", config.current_config.quit_key, function()
+    if vim.api.nvim_win_is_valid(win_id) then
+      vim.api.nvim_win_close(win_id, true)
+    end
+    if on_close then
+      on_close()
+    end
+  end, { buffer = buf_id })
+
+  return win_id, buf_id
 end
 
---- Streams lines of text to the floating window's buffer.
--- This function appends the given lines to the end of the buffer
--- associated with the floating window. It ensures the window and buffer
--- are still valid before attempting to modify them. The modification
--- is scheduled to run on the main loop to prevent UI glitches.
----@param lines table A table of strings, where each string is a line to be appended.
-M.stream_text_to_window = function(lines)
+--- Updates the content of a floating window.
+-- @param win_id number The ID of the window to update.
+-- @param buf_id number The ID of the buffer to update.
+-- @param content string The new content.
+function M.update_float(win_id, buf_id, content)
   vim.schedule(function()
-    if not (M.result_buffer and vim.api.nvim_buf_is_valid(M.result_buffer)) then
+    if not (buf_id and vim.api.nvim_buf_is_valid(buf_id)) then
       return
     end
-    if not (M.float_win and vim.api.nvim_win_is_valid(M.float_win)) then
+    if not (win_id and vim.api.nvim_win_is_valid(win_id)) then
       return
     end
 
-    vim.api.nvim_set_option_value("modifiable", true, { buf = M.result_buffer })
-    -- append the lines to the end of buffer
-    vim.api.nvim_buf_set_lines(M.result_buffer, -1, -1, false, lines)
-    vim.api.nvim_set_option_value("modifiable", false, { buf = M.result_buffer })
+    vim.api.nvim_set_option_value("modifiable", true, { buf = buf_id })
+    vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, vim.split(content, "\n"))
+    vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
 
     -- Scroll to the bottom to show new content
-    local line_count = vim.api.nvim_buf_line_count(M.result_buffer)
-    vim.api.nvim_win_set_cursor(M.float_win, { line_count, 0 })
+    local line_count = vim.api.nvim_buf_line_count(buf_id)
+    vim.api.nvim_win_set_cursor(win_id, { line_count, 0 })
   end)
 end
 

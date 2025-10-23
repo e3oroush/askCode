@@ -4,7 +4,14 @@ local runner = require("askCode.runner")
 local agents = require("askCode.agents")
 local utils = require("askCode.utils")
 
-M = {}
+local M = {}
+
+local state = {
+  history_file = nil,
+  win_id = nil,
+  buf_id = nil,
+  display_content = "",
+}
 
 --- setup function
 ---@param cfg? Config
@@ -12,93 +19,134 @@ function M.setup(cfg)
   config.merge_with_default(cfg)
 end
 
-local function _create_stream_processor(current_config, agent)
-  if current_config.output_format == "json" and agent.parse_response then
-    -- JSON processor
-    local all_lines = {}
-    return {
-      handle_data = function(lines)
-        vim.list_extend(all_lines, lines)
-      end,
-      handle_exit = function()
-        local full_response = table.concat(all_lines, "\n")
-        if full_response == "" then
-          return
-        end
-        local parsed = agent.parse_response(full_response)
-        if parsed then
-          ui.stream_text_to_window(vim.split(parsed, "\n"))
-        else
-          ui.stream_text_to_window(all_lines)
-        end
-      end,
-    }
+local function get_full_prompt(question, mode, history)
+  if history and history ~= "" then
+    return string.format("%s\n\n--- USER ---\n%s", history, question)
   else
-    -- Plain text processor
-    return {
-      handle_data = function(lines)
-        ui.stream_text_to_window(lines)
-      end,
-      handle_exit = function() end,
-    }
+    local buffer_content = utils.get_buffer_content(mode)
+    local filetype = vim.bo.filetype
+    return string.format(
+      "You're a code assistant without ability to change or edit files. Given the provided context, try to answer user's question. Here is the context for your answer:\nFiletype: %s\nContent:\n---\n%s\n---\n\n--- USER ---\n%s",
+      filetype,
+      buffer_content,
+      question
+    )
   end
 end
 
---- @param question string The question to ask.
 function M.ask(question, mode)
-  local buffer_content = utils.get_buffer_content(mode)
-  local filetype = vim.bo.filetype
+  -- If a conversation is already active, close it.
+  if state.win_id and vim.api.nvim_win_is_valid(state.win_id) then
+    vim.api.nvim_win_close(state.win_id, true)
+  end
+  if state.history_file then
+    utils.delete_file(state.history_file)
+  end
 
-  local new_question = string.format(
-    "You're a code assistant without ability to change or edit files. Given the provided context, try to answer user's question. Here is the context for your answer:\nFiletype: %s\nContent:\n---\n%s\n---\n\nThe user question is: %s",
-    filetype,
-    buffer_content,
-    question
-  )
+  state.history_file = vim.fn.tempname()
+  state.win_id = nil
+  state.buf_id = nil
+  state.display_content = ""
 
-  ui.create_floating_window()
+  local full_prompt = get_full_prompt(question, mode)
+  utils.write_file(state.history_file, full_prompt)
 
   local agent_name = config.current_config.agent
   local agent = agents.get_agent(agent_name)
-
   if not agent then
     vim.notify("Agent not found: " .. agent_name, vim.log.levels.ERROR)
     return
   end
 
-  local command = agent.prepare_command(new_question)
-  if config.current_config.debug then
-    vim.notify("Running command: " .. command)
-  end
+  local command = agent.prepare_command(full_prompt)
 
-  local processor = _create_stream_processor(config.current_config, agent)
-
-  local partial_line = ""
-  local on_stdout = function(_, data, _)
-    if not data or #data == 0 then
-      return
-    end
-
-    data[1] = partial_line .. data[1]
-    partial_line = ""
-
-    if #data > 0 then
-      partial_line = table.remove(data)
-    end
-
-    if #data > 0 then
-      processor.handle_data(data)
+  local response_lines = {}
+  local on_stdout = function(_, data)
+    if data then
+      for _, line in ipairs(data) do
+        table.insert(response_lines, line)
+      end
     end
   end
 
   local on_exit = function()
-    if partial_line ~= "" then
-      processor.handle_data({ partial_line })
+    local response = table.concat(response_lines, "\n")
+    if agent.parse_response then
+      local parsed = agent.parse_response(response)
+      if parsed then
+        response = parsed
+      end
     end
-    processor.handle_exit()
+    local agent_response = "\n\n--- AGENT ---\n" .. response
+    utils.append_file(state.history_file, agent_response)
+
+    state.display_content = "AGENT: " .. response
+
+    local on_close = function()
+      utils.delete_file(state.history_file)
+      state.history_file = nil
+      state.win_id = nil
+      state.buf_id = nil
+      state.display_content = ""
+    end
+
+    if state.win_id and vim.api.nvim_win_is_valid(state.win_id) then
+      ui.update_float(state.win_id, state.buf_id, state.display_content)
+    else
+      state.win_id, state.buf_id = ui.show_in_float(state.display_content, on_close)
+    end
   end
 
-  runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit })
+  runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit, stdout_buffered = true })
+end
+
+function M.follow_up(question)
+  if not state.history_file then
+    vim.notify("No active conversation. Start a new one with :AskCode", vim.log.levels.WARN)
+    return
+  end
+
+  local user_question = "\n\n--- USER ---\n" .. question
+  utils.append_file(state.history_file, user_question)
+
+  local history_content = utils.read_file(state.history_file)
+
+  local agent_name = config.current_config.agent
+  local agent = agents.get_agent(agent_name)
+  if not agent then
+    vim.notify("Agent not found: " .. agent_name, vim.log.levels.ERROR)
+    return
+  end
+
+  local command = agent.prepare_command(history_content)
+
+  local response_lines = {}
+  local on_stdout = function(_, data)
+    if data then
+      for _, line in ipairs(data) do
+        table.insert(response_lines, line)
+      end
+    end
+  end
+
+  local on_exit = function()
+    local response = table.concat(response_lines, "\n")
+    if agent.parse_response then
+      local parsed = agent.parse_response(response)
+      if parsed then
+        response = parsed
+      end
+    end
+    local agent_response = "\n\n--- AGENT ---\n" .. response
+    utils.append_file(state.history_file, agent_response)
+
+    local new_display_part = string.format("\n\n---\n\nUSER: %s\n\nAGENT: %s", question, response)
+    state.display_content = state.display_content .. new_display_part
+
+    ui.update_float(state.win_id, state.buf_id, state.display_content)
+  end
+
+  runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit, stdout_buffered = true })
 end
 
 return M
