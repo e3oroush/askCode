@@ -57,6 +57,12 @@ require("askCode").setup({
   debug = false,           -- Enable debug mode (default: false)
   quit_key = "q",          -- Key to quit floating windows (default: "q")
   output_format = "json",  -- Output format (default: "json")
+  window = {               -- Floating window configuration
+    width_ratio = 0.7,     -- Window width as ratio of screen width (default: 0.7)
+    height_ratio = 0.7,    -- Window height as ratio of screen height (default: 0.7)
+    max_width = 240,       -- Maximum window width in columns (default: 240)
+    max_height = 60,       -- Maximum window height in rows (default: 60)
+  },
 })
 ```
 
@@ -109,3 +115,4 @@ The project uses `mini.nvim` for its testing framework. You can find more inform
 - [ ] **Support Streaming JSON**: Improve the stream processor to parse chunked JSON responses for real-time display.
 - [ ] **Support Follow-up Questions**: Maintain conversation history to allow for follow-up questions.
 - [ ] **Support Prompt Templates**: Allow users to define custom prompt templates in the configuration.
+- [ ] **Support Text Replacement Actions**: Enable agent to perform text replacements or modifications (e.g., adding function docstrings, refactoring code) directly in the buffer instead of just displaying responses.
