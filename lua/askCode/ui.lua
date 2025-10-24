@@ -54,7 +54,8 @@ end
 -- @param win_id number The ID of the window to update.
 -- @param buf_id number The ID of the buffer to update.
 -- @param content string The new content.
-function M.update_float(win_id, buf_id, content)
+-- @param cursor_line number|nil Optional line number to position cursor (defaults to end).
+function M.update_float(win_id, buf_id, content, cursor_line)
   vim.schedule(function()
     if not (buf_id and vim.api.nvim_buf_is_valid(buf_id)) then
       return
@@ -67,9 +68,10 @@ function M.update_float(win_id, buf_id, content)
     vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, vim.split(content, "\n"))
     vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
 
-    -- Scroll to the bottom to show new content
+    -- Position cursor
     local line_count = vim.api.nvim_buf_line_count(buf_id)
-    vim.api.nvim_win_set_cursor(win_id, { line_count, 0 })
+    local target_line = cursor_line or line_count
+    vim.api.nvim_win_set_cursor(win_id, { target_line, 0 })
   end)
 end
 

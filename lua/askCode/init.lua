@@ -44,8 +44,6 @@ function M.ask(question, mode)
   end
 
   state.history_file = vim.fn.tempname()
-  state.win_id = nil
-  state.buf_id = nil
   state.display_content = ""
 
   local full_prompt = get_full_prompt(question, mode)
@@ -57,6 +55,17 @@ function M.ask(question, mode)
     vim.notify("Agent not found: " .. agent_name, vim.log.levels.ERROR)
     return
   end
+
+  -- Create floating window immediately with loading message
+  local on_close = function()
+    utils.delete_file(state.history_file)
+    state.history_file = nil
+    state.win_id = nil
+    state.buf_id = nil
+    state.display_content = ""
+  end
+
+  state.win_id, state.buf_id = ui.show_in_float("Loading...", on_close)
 
   local command = agent.prepare_command(full_prompt)
 
@@ -81,20 +90,7 @@ function M.ask(question, mode)
     utils.append_file(state.history_file, agent_response)
 
     state.display_content = "AGENT: " .. response
-
-    local on_close = function()
-      utils.delete_file(state.history_file)
-      state.history_file = nil
-      state.win_id = nil
-      state.buf_id = nil
-      state.display_content = ""
-    end
-
-    if state.win_id and vim.api.nvim_win_is_valid(state.win_id) then
-      ui.update_float(state.win_id, state.buf_id, state.display_content)
-    else
-      state.win_id, state.buf_id = ui.show_in_float(state.display_content, on_close)
-    end
+    ui.update_float(state.win_id, state.buf_id, state.display_content)
   end
 
   runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit, stdout_buffered = true })
@@ -117,6 +113,10 @@ function M.follow_up(question)
     vim.notify("Agent not found: " .. agent_name, vim.log.levels.ERROR)
     return
   end
+
+  -- Calculate cursor position at end of previous answer
+  local previous_content_lines = vim.split(state.display_content, "\n")
+  local cursor_position = #previous_content_lines + 3 -- +3 for separator lines
 
   local command = agent.prepare_command(history_content)
 
@@ -143,7 +143,7 @@ function M.follow_up(question)
     local new_display_part = string.format("\n\n---\n\nUSER: %s\n\nAGENT: %s", question, response)
     state.display_content = state.display_content .. new_display_part
 
-    ui.update_float(state.win_id, state.buf_id, state.display_content)
+    ui.update_float(state.win_id, state.buf_id, state.display_content, cursor_position)
   end
 
   runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit, stdout_buffered = true })
