@@ -1,4 +1,3 @@
--- tests/test_utils.lua
 local new_set = MiniTest.new_set
 local expect, eq = MiniTest.expect, MiniTest.expect.equality
 
@@ -17,7 +16,7 @@ local T = new_set({
 T["get_buffer_content"] = new_set()
 
 T["get_buffer_content"]["should return full buffer content in normal mode"] = function()
-  child.lua([[ 
+  child.lua([[
     vim.api.nvim_command('new')
     vim.api.nvim_buf_set_lines(0, 0, -1, false, {'line 1', 'line 2', 'line 3'})
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'n', false)
@@ -27,7 +26,7 @@ T["get_buffer_content"]["should return full buffer content in normal mode"] = fu
 end
 
 T["get_buffer_content"]["should return selected lines in visual mode"] = function()
-  child.lua([[ 
+  child.lua([[
     vim.api.nvim_command('new')
     vim.api.nvim_buf_set_lines(0, 0, -1, false, {'line 1', 'line 2', 'line 3'})
     vim.fn.setpos("'<", {0, 2, 1})

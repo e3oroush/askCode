@@ -18,6 +18,18 @@ local T = new_set({
         utils = require('askCode.utils')
         agents = require('askCode.agents')
         config = require('askCode.config')
+
+        -- Mock UI functions
+        _G.show_in_float_calls = {}
+        ui.show_in_float = function(content, on_close)
+          table.insert(_G.show_in_float_calls, {content = content})
+          return 1, 1 -- return mock win_id and buf_id
+        end
+
+        _G.update_float_calls = {}
+        ui.update_float = function(win_id, buf_id, content)
+          table.insert(_G.update_float_calls, {win_id = win_id, buf_id = buf_id, content = content})
+        end
       ]])
     end,
     -- After all tests in this set are done, stop the child process
@@ -28,98 +40,94 @@ local T = new_set({
 -- Define a nested test set for a specific function or feature
 T["ask"] = new_set()
 
--- Define a test case for plain text streaming
-T["ask"]["should stream plain text response to the window"] = function()
+-- Define a test case for plain text response
+T["ask"]["should show plain text response in new window"] = function()
   -- 1. Mock dependencies
-  child.lua([[
-    -- Set config for plain text
-    config.merge_with_default({ output_format = 'text' })
-
-    -- Mock get_buffer_content
+  child.lua([[ 
     utils.get_buffer_content = function() return "mock buffer content" end
-
-    -- Mock get_agent
     agents.get_agent = function(name)
       return {
         prepare_command = function(question) return "echo 'mocked response'" end
       }
     end
-
-    -- Mock create_floating_window
-    ui.create_floating_window = function() end
-
-    -- Mock run_command
-    local captured_output = {}
-    runner.run_command = function(cmd, on_stdout, on_exit)
-      on_stdout(nil, { "mocked response line 1", "mocked response line 2" }, nil)
-      on_exit.on_exit()
+    runner.run_command = function(cmd, on_stdout, opts)
+      on_stdout(nil, {"mocked response"}, nil)
+      opts.on_exit()
     end
-
-    -- Mock stream_text_to_window to capture output
-    ui.stream_text_to_window = function(lines)
-      vim.list_extend(captured_output, lines)
-    end
-
-    _G.captured_output = captured_output
   ]])
 
   -- 2. Execute the function
   child.lua([[M.ask('test question', 'visual')]])
+  child.lua("vim.loop.sleep(100)") -- Wait for async operations
 
   -- 3. Assert the expected outcome
-  local result = child.lua_get("_G.captured_output")
-  eq(result, { "mocked response line 1", "mocked response line 2" })
+  local show_calls = child.lua_get("_G.show_in_float_calls")
+  eq(#show_calls, 1)
+  eq(show_calls[1].content, "AGENT: mocked response")
 end
 
 -- Define a test case for JSON response
-T["ask"]["should parse and stream JSON response to the window"] = function()
+T["ask"]["should parse and show JSON response in new window"] = function()
   -- 1. Mock dependencies
-  child.lua([[
-    -- Set config for json
-    config.merge_with_default({ output_format = 'json' })
-
-    -- Mock get_buffer_content
+  child.lua([[ 
     utils.get_buffer_content = function() return "mock buffer content" end
-
-    -- Mock get_agent
     agents.get_agent = function(name)
       return {
         prepare_command = function(question) return "echo 'json response'" end,
-        parse_response = function(json_string)
-          -- In a real scenario, this would parse JSON. Here we just check the input.
-          if json_string == '{"response": "parsed content"}' then
-            return "parsed content"
-          else
-            return nil
-          end
-        end
+        parse_response = function(json_string) return "parsed content" end
       }
     end
-
-    -- Mock create_floating_window
-    ui.create_floating_window = function() end
-
-    -- Mock run_command
-    local captured_output = {}
-    runner.run_command = function(cmd, on_stdout, on_exit)
-      on_stdout(nil, { '{"response": "parsed content"}' }, nil)
-      on_exit.on_exit()
+    runner.run_command = function(cmd, on_stdout, opts)
+      on_stdout(nil, {"json response"}, nil)
+      opts.on_exit()
     end
-
-    -- Mock stream_text_to_window to capture output
-    ui.stream_text_to_window = function(lines)
-      vim.list_extend(captured_output, lines)
-    end
-
-    _G.captured_output = captured_output
   ]])
 
   -- 2. Execute the function
   child.lua([[M.ask('test question', 'visual')]])
+  child.lua("vim.loop.sleep(100)") -- Wait for async operations
 
   -- 3. Assert the expected outcome
-  local result = child.lua_get("_G.captured_output")
-  eq(result, { "parsed content" })
+  local show_calls = child.lua_get("_G.show_in_float_calls")
+  eq(#show_calls, 1)
+  eq(show_calls[1].content, "AGENT: parsed content")
+end
+
+T["follow_up"] = new_set()
+
+T["follow_up"]["should update window with conversation"] = function()
+  -- 1. Mock dependencies
+  child.lua([[ 
+    utils.get_buffer_content = function() return "mock buffer content" end
+    agents.get_agent = function(name)
+      return {
+        prepare_command = function(question) return "echo 'response'" end,
+        parse_response = function(res) return res end
+      }
+    end
+    local ask_count = 0
+    runner.run_command = function(cmd, on_stdout, opts)
+      ask_count = ask_count + 1
+      if ask_count == 1 then
+        on_stdout(nil, {"initial response"}, nil)
+      else
+        on_stdout(nil, {"follow-up response"}, nil)
+      end
+      opts.on_exit()
+    end
+  ]])
+
+  -- 2. Execute initial question and follow-up
+  child.lua([[M.ask('initial question', 'visual')]])
+  child.lua("vim.loop.sleep(100)") -- Wait for async operations
+  child.lua([[M.follow_up('follow-up question')]])
+  child.lua("vim.loop.sleep(100)") -- Wait for async operations
+
+  -- 3. Assert the expected outcome
+  local update_calls = child.lua_get("_G.update_float_calls")
+  eq(#update_calls, 1)
+  local expected_content = "AGENT: initial response\n\n---\n\nUSER: follow-up question\n\nAGENT: follow-up response"
+  eq(update_calls[1].content, expected_content)
 end
 
 
