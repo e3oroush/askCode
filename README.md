@@ -69,8 +69,11 @@ require("askCode").setup({
 ## Usage
 
 1.  **Select code**: Select a block of code in visual mode.
-2.  **Run a prompt**: Use the `:AskCode <prompt_name>` command, where `<prompt_name>` is one of the configured prompts (e.g., `:AskCode "Explain this code"`).
-3.  **View the response**: The AI-generated response will appear in a floating window or split.
+2.  **Ask initial question**: Use the `:AskCode <question>` command (e.g., `:AskCode "Explain this code"`).
+3.  **Ask follow-up questions**: Use `:AskCode <follow_up_question>` again to continue the conversation in the same window.
+4.  **View responses**: AI-generated responses appear in a floating window, with conversation history maintained.
+
+The `:AskCode` command automatically detects whether to start a new conversation or continue an existing one.
 
 You can also map the commands to keybindings for easier access:
 

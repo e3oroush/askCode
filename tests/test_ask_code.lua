@@ -51,8 +51,10 @@ T["ask"]["should show plain text response in new window"] = function()
       }
     end
     runner.run_command = function(cmd, on_stdout, opts)
-      on_stdout(nil, {"mocked response"}, nil)
-      opts.on_exit()
+      vim.defer_fn(function()
+        on_stdout(nil, {"mocked response"}, nil)
+        opts.on_exit()
+      end, 10)
     end
   ]])
 
@@ -61,9 +63,9 @@ T["ask"]["should show plain text response in new window"] = function()
   child.lua("vim.loop.sleep(100)") -- Wait for async operations
 
   -- 3. Assert the expected outcome
-  local show_calls = child.lua_get("_G.show_in_float_calls")
-  eq(#show_calls, 1)
-  eq(show_calls[1].content, "AGENT: mocked response")
+  local update_calls = child.lua_get("_G.update_float_calls")
+  eq(#update_calls, 1)
+  eq(update_calls[1].content, "AGENT: mocked response")
 end
 
 -- Define a test case for JSON response
@@ -78,8 +80,10 @@ T["ask"]["should parse and show JSON response in new window"] = function()
       }
     end
     runner.run_command = function(cmd, on_stdout, opts)
-      on_stdout(nil, {"json response"}, nil)
-      opts.on_exit()
+      vim.defer_fn(function()
+        on_stdout(nil, {"json response"}, nil)
+        opts.on_exit()
+      end, 10)
     end
   ]])
 
@@ -88,9 +92,9 @@ T["ask"]["should parse and show JSON response in new window"] = function()
   child.lua("vim.loop.sleep(100)") -- Wait for async operations
 
   -- 3. Assert the expected outcome
-  local show_calls = child.lua_get("_G.show_in_float_calls")
-  eq(#show_calls, 1)
-  eq(show_calls[1].content, "AGENT: parsed content")
+  local update_calls = child.lua_get("_G.update_float_calls")
+  eq(#update_calls, 1)
+  eq(update_calls[1].content, "AGENT: parsed content")
 end
 
 T["follow_up"] = new_set()
@@ -108,12 +112,14 @@ T["follow_up"]["should update window with conversation"] = function()
     local ask_count = 0
     runner.run_command = function(cmd, on_stdout, opts)
       ask_count = ask_count + 1
-      if ask_count == 1 then
-        on_stdout(nil, {"initial response"}, nil)
-      else
-        on_stdout(nil, {"follow-up response"}, nil)
-      end
-      opts.on_exit()
+      vim.defer_fn(function()
+        if ask_count == 1 then
+          on_stdout(nil, {"initial response"}, nil)
+        else
+          on_stdout(nil, {"follow-up response"}, nil)
+        end
+        opts.on_exit()
+      end, 10)
     end
   ]])
 
@@ -125,9 +131,9 @@ T["follow_up"]["should update window with conversation"] = function()
 
   -- 3. Assert the expected outcome
   local update_calls = child.lua_get("_G.update_float_calls")
-  eq(#update_calls, 1)
+  eq(#update_calls, 2) -- One for initial ask, one for follow-up
   local expected_content = "AGENT: initial response\n\n---\n\nUSER: follow-up question\n\nAGENT: follow-up response"
-  eq(update_calls[1].content, expected_content)
+  eq(update_calls[2].content, expected_content)
 end
 
 

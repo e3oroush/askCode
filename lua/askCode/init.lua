@@ -149,4 +149,17 @@ function M.follow_up(question)
   runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit, stdout_buffered = true })
 end
 
+function M.ask_or_follow_up(question, mode)
+  if not state.history_file or not (state.win_id and vim.api.nvim_win_is_valid(state.win_id)) then
+    M.ask(question, mode)
+  else
+    M.follow_up(question)
+  end
+end
+
+
+function M.get_state_for_test()
+  return state
+end
+
 return M
