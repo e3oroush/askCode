@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/e3oroush/askCode/compare/v1.0.0...v1.1.0) (2025-10-26)
+
+
+### Features
+
+* **docs:** add initial documentation ([a300d71](https://github.com/e3oroush/askCode/commit/a300d715d5e9a228144a4dd272cb19dcb1c1b078))
+
 ## 1.0.0 (2025-10-26)
 
 
