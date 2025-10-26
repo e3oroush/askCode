@@ -65,4 +65,34 @@ function M.delete_file(file_path)
   os.remove(file_path)
 end
 
+--- Parses replacement content from AI response
+--- @param response string The full AI response
+--- @return table|nil {replacement_content = string, explanation = string} or nil if no replacement found
+function M.parse_replacement_response(response)
+  local replacement_start = response:find("<REPLACE>")
+  if not replacement_start then
+    return nil
+  end
+
+  local content_start = replacement_start + 9 -- length of "<REPLACE>"
+  local replacement_end = response:find("</REPLACE>", content_start)
+  if not replacement_end then
+    return nil
+  end
+
+  local replacement_content = response:sub(content_start, replacement_end - 1)
+  -- Remove leading/trailing newlines
+  replacement_content = replacement_content:gsub("^%s*\n", ""):gsub("\n%s*$", "")
+
+  -- Build explanation by removing the entire replacement block
+  local before_block = response:sub(1, replacement_start - 1)
+  local after_block = response:sub(replacement_end + 10) -- length of "</REPLACE>"
+  local explanation = before_block .. after_block
+
+  return {
+    replacement_content = replacement_content,
+    explanation = explanation:gsub("^%s+", ""):gsub("%s+$", ""), -- trim whitespace
+  }
+end
+
 return M

@@ -7,6 +7,7 @@ AskCode is a Neovim plugin that helps developers explore and understand codebase
 - **Multi-agent support**: Choose your preferred AI backend (Gemini, AmazonQ, etc.).
 - **Configurable**: Select agents and tweak settings via a simple Lua API.
 - **Prepared prompts**: Built-in use cases like explaining code, finding bugs, or suggesting optimizations.
+- **Code replacement**: Select code and ask AI to modify it directly in your buffer (add docstrings, fix bugs, refactor, etc.).
 - **Extensible**: Add your own agents and custom prompts.
 - **Neovim-native UI**: Responses are displayed in floating windows or splits, asynchronously and non-blockingly.
 
@@ -68,6 +69,8 @@ require("askCode").setup({
 
 ## Usage
 
+### Asking Questions
+
 1.  **Select code**: Select a block of code in visual mode.
 2.  **Ask initial question**: Use the `:AskCode <question>` command (e.g., `:AskCode "Explain this code"`).
 3.  **Ask follow-up questions**: Use `:AskCode <follow_up_question>` again to continue the conversation in the same window.
@@ -75,14 +78,28 @@ require("askCode").setup({
 
 The `:AskCode` command automatically detects whether to start a new conversation or continue an existing one.
 
-You can also map the commands to keybindings for easier access:
+### Code Replacement
+
+1.  **Select code**: Select a block of code in visual mode.
+2.  **Request replacement**: Use the `:AskCodeReplace <request>` command (e.g., `:AskCodeReplace "Add docstring to this function"`).
+3.  **Review changes**: The AI response appears in an editable floating window.
+4.  **Apply or cancel**: Press `Q` to apply the replacement to your buffer, or `q` to cancel.
+
+**Note**: Code replacement only works in visual mode with selected text.
+
+### Keybinding Examples
+
+You can map the commands to keybindings for easier access:
 
 ```lua
--- Map "Explain this code" to <leader>ae
-vim.api.nvim_set_keymap("v", "<leader>ae", ":AskCode "Explain this code"<CR>", { noremap = true, silent = true })
+-- Ask questions about code
+vim.api.nvim_set_keymap("v", "<leader>ae", ":AskCode \"Explain this code\"<CR>", { noremap = true, silent = true })
+vim.api.nvim_set_keymap("v", "<leader>ab", ":AskCode \"Find potential bugs\"<CR>", { noremap = true, silent = true })
 
--- Map "Find potential bugs" to <leader>ab
-vim.api.nvim_set_keymap("v", "<leader>ab", ":AskCode "Find potential bugs"<CR>", { noremap = true, silent = true })
+-- Code replacement shortcuts
+vim.api.nvim_set_keymap("v", "<leader>ad", ":AskCodeReplace \"Add docstring\"<CR>", { noremap = true, silent = true })
+vim.api.nvim_set_keymap("v", "<leader>af", ":AskCodeReplace \"Fix this code\"<CR>", { noremap = true, silent = true })
+vim.api.nvim_set_keymap("v", "<leader>ar", ":AskCodeReplace \"Refactor this code\"<CR>", { noremap = true, silent = true })
 ```
 
 ## Development
@@ -118,4 +135,4 @@ The project uses `mini.nvim` for its testing framework. You can find more inform
 - [ ] **Support Streaming JSON**: Improve the stream processor to parse chunked JSON responses for real-time display.
 - [x] **Support Follow-up Questions**: Maintain conversation history to allow for follow-up questions.
 - [ ] **Support Prompt Templates**: Allow users to define custom prompt templates in the configuration.
-- [ ] **Support Text Replacement Actions**: Enable agent to perform text replacements or modifications (e.g., adding function docstrings, refactoring code) directly in the buffer instead of just displaying responses.
+- [x] **Support Text Replacement Actions**: Enable agent to perform text replacements or modifications (e.g., adding function docstrings, refactoring code) directly in the buffer instead of just displaying responses.

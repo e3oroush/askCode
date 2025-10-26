@@ -15,21 +15,34 @@ end
 function M.prepare_command(prompt)
   -- Escape the prompt to ensure it's safely passed to the shell.
   local escaped_prompt = vim.fn.shellescape(prompt)
-  return string.format("echo %s | q chat --no-interactive", escaped_prompt)
+  return string.format("echo %s | q chat --no-interactive 2>&1", escaped_prompt)
 end
 
 --- Parses the response from the AmazonQ CLI.
 --- @param response_string string The response string to parse.
 --- @return string? The response, or nil if parsing fails.
 function M.parse_response(response_string)
-  -- AmazonQ doesn't support JSON yet, so return the input string for consistency
   if not response_string or response_string == "" then
     vim.notify("Empty response from AmazonQ", vim.log.levels.ERROR)
     return nil
   end
-  -- Strip ANSI escape codes
-  local cleaned = response_string:gsub("\27%[[0-9;]*m", "")
-  return cleaned
+
+  -- Strip all ANSI escape codes (colors, cursor control, etc.)
+  local cleaned = response_string:gsub("\27%[[%d;]*[mKHJhlABCDEFGST]", "")
+  cleaned = cleaned:gsub("\27%[%?%d+[hl]", "") -- cursor visibility codes like [?25l, [?25h
+
+  -- Find content after the prompt indicator ">"
+  local response_start = cleaned:find(">")
+  if response_start then
+    local content = cleaned:sub(response_start + 1)
+
+    -- Clean up leading/trailing whitespace but preserve internal structure
+    content = content:gsub("^%s+", ""):gsub("%s+$", "")
+
+    return content
+  end
+
+  return nil
 end
 
 --- Sends a prompt to the AmazonQ CLI and returns the response.

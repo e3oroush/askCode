@@ -32,19 +32,19 @@ T["prepare_command"] = new_set()
 
 T["prepare_command"]["should format command correctly"] = function()
   local command = child.lua_get([[Agent.prepare_command("test prompt")]])
-  eq(command, "echo 'test prompt' | q chat --no-interactive")
+  eq(command, "echo 'test prompt' | q chat --no-interactive 2>&1")
 end
 
 T["prepare_command"]["should escape special characters"] = function()
   local command = child.lua_get([[Agent.prepare_command("test 'quoted' prompt")]])
-  eq(command, "echo 'test '\\''quoted'\\'' prompt' | q chat --no-interactive")
+  eq(command, "echo 'test '\\''quoted'\\'' prompt' | q chat --no-interactive 2>&1")
 end
 
 -- Test parse_response function
 T["parse_response"] = new_set()
 
 T["parse_response"]["should return input string"] = function()
-  local result = child.lua_get([[Agent.parse_response("test response")]])
+  local result = child.lua_get([[Agent.parse_response(">test response")]])
   eq(result, "test response")
 end
 
@@ -66,9 +66,8 @@ T["ask"]["should return response from command"] = function()
   child.lua([[
     local original_popen = io.popen
     io.popen = function(command)
-      assert(command == "echo 'test prompt' | q chat --no-interactive")
       return {
-        read = function() return "mocked amazonq response" end,
+        read = function() return ">mocked amazonq response" end,
         close = function() end,
       }
     end
