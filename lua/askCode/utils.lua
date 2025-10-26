@@ -95,4 +95,23 @@ function M.parse_replacement_response(response)
   }
 end
 
+--- Applies replacement content to the originally selected lines
+--- @param replacement_content string The content to replace with
+--- @param selection_info table Selection boundaries {start_line, end_line, bufnr}
+function M.apply_replacement(replacement_content, selection_info)
+  local bufnr = selection_info.bufnr
+  local start_line = selection_info.start_line
+  local end_line = selection_info.end_line
+
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    vim.notify("Original buffer is no longer valid", vim.log.levels.ERROR)
+    return
+  end
+
+  local replacement_lines = vim.split(replacement_content, "\n")
+  vim.api.nvim_buf_set_lines(bufnr, start_line - 1, end_line, false, replacement_lines)
+
+  vim.notify("Replacement applied successfully", vim.log.levels.INFO)
+end
+
 return M

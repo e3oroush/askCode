@@ -131,8 +131,9 @@ The project uses `mini.nvim` for its testing framework. You can find more inform
 
 ## Todo
 
-- [x] **Integrate AmazonQ Agent**: Add a new agent for AmazonQ by implementing the `prepare_command` function for its CLI.
+- [ ] **Support Prompt Templates**: Allow users to define custom prompt templates in the configuration.
+- [ ] **Integrate Claude-Code Agent**: Add a new agent for ClaudeCode by implementing the `prepare_command` function for its CLI.
 - [ ] **Support Streaming JSON**: Improve the stream processor to parse chunked JSON responses for real-time display.
 - [x] **Support Follow-up Questions**: Maintain conversation history to allow for follow-up questions.
-- [ ] **Support Prompt Templates**: Allow users to define custom prompt templates in the configuration.
+- [x] **Integrate AmazonQ Agent**: Add a new agent for AmazonQ by implementing the `prepare_command` function for its CLI.
 - [x] **Support Text Replacement Actions**: Enable agent to perform text replacements or modifications (e.g., adding function docstrings, refactoring code) directly in the buffer instead of just displaying responses.

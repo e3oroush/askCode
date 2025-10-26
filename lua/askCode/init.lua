@@ -19,25 +19,6 @@ function M.setup(cfg)
   config.merge_with_default(cfg)
 end
 
---- Applies replacement content to the originally selected lines
---- @param replacement_content string The content to replace with
---- @param selection_info table Selection boundaries {start_line, end_line, bufnr}
-local function apply_replacement(replacement_content, selection_info)
-  local bufnr = selection_info.bufnr
-  local start_line = selection_info.start_line
-  local end_line = selection_info.end_line
-
-  if not vim.api.nvim_buf_is_valid(bufnr) then
-    vim.notify("Original buffer is no longer valid", vim.log.levels.ERROR)
-    return
-  end
-
-  local replacement_lines = vim.split(replacement_content, "\n")
-  vim.api.nvim_buf_set_lines(bufnr, start_line - 1, end_line, false, replacement_lines)
-
-  vim.notify("Replacement applied successfully", vim.log.levels.INFO)
-end
-
 --- Constructs a prompt for the AI assistant based on question, mode, and conversation history
 --- @param question string The user's question or request
 --- @param mode string The current editor mode (visual, normal, etc.)
@@ -179,14 +160,6 @@ function M.follow_up(question)
     end
   end
 
-  local on_stderr = function(_, data)
-    if data and agent_name == "amazonq" then
-      for _, line in ipairs(data) do
-        table.insert(response_lines, line)
-      end
-    end
-  end
-
   local on_exit = function()
     local response = table.concat(response_lines, "\n")
     if agent.parse_response then
@@ -204,11 +177,7 @@ function M.follow_up(question)
     ui.update_float(state.win_id, state.buf_id, state.display_content, cursor_position)
   end
 
-  runner.run_command(
-    { "sh", "-c", command },
-    on_stdout,
-    { on_stderr = on_stderr, on_exit = on_exit, stdout_buffered = true }
-  )
+  runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit, stdout_buffered = true })
 end
 
 --- Starts a replacement conversation with an AI agent about selected code
@@ -238,8 +207,7 @@ function M.ask_replace(question, mode)
   local on_apply = function(edited_content)
     local parsed = utils.parse_replacement_response(edited_content)
     if parsed and parsed.replacement_content then
-      vim.notify("replacing")
-      apply_replacement(parsed.replacement_content, selection_info)
+      utils.apply_replacement(parsed.replacement_content, selection_info)
     else
       vim.notify("No replacement block found in edited content", vim.log.levels.WARN)
     end
@@ -267,14 +235,6 @@ function M.ask_replace(question, mode)
     end
   end
 
-  local on_stderr = function(_, data)
-    if data and agent_name == "amazonq" then
-      for _, line in ipairs(data) do
-        table.insert(response_lines, line)
-      end
-    end
-  end
-
   local on_exit = function()
     local response = table.concat(response_lines, "\n")
     if agent.parse_response then
@@ -288,11 +248,7 @@ function M.ask_replace(question, mode)
     ui.update_float(state.win_id, state.buf_id, state.display_content, nil, true)
   end
 
-  runner.run_command(
-    { "sh", "-c", command },
-    on_stdout,
-    { on_stderr = on_stderr, on_exit = on_exit, stdout_buffered = true }
-  )
+  runner.run_command({ "sh", "-c", command }, on_stdout, { on_exit = on_exit, stdout_buffered = true })
 end
 
 function M.ask_or_follow_up(question, mode)
