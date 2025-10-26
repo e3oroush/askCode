@@ -37,3 +37,16 @@ vim.api.nvim_create_user_command("AskCodeReplace", function(opts)
     require("askCode").ask_replace(opts.args, mode)
   end
 end, { range = true, nargs = "?" })
+
+vim.keymap.set(
+  "v",
+  "<Plug>(AskCodeExplain)",
+  'AskCode "Explain this code"<CR>',
+  { desc = "Asking code agent to explain the selected code" }
+)
+vim.keymap.set(
+  "v",
+  "<Plug>(AskCodeAddDocstring)",
+  ':AskCodeReplace "Add docstring to this function"<CR>',
+  { desc = "Asking code agent add docstring to the selected function" }
+)

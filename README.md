@@ -93,13 +93,12 @@ You can map the commands to keybindings for easier access:
 
 ```lua
 -- Ask questions about code
-vim.api.nvim_set_keymap("v", "<leader>ae", ":AskCode \"Explain this code\"<CR>", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("v", "<leader>ab", ":AskCode \"Find potential bugs\"<CR>", { noremap = true, silent = true })
+vim.keymap.set("v", "<leader>ae", ":AskCode <Plug>(AskCodeExplain)")
+vim.keymap.set("v", "<leader>ab", ":AskCode \"Find potential bugs\"<CR>")
 
 -- Code replacement shortcuts
-vim.api.nvim_set_keymap("v", "<leader>ad", ":AskCodeReplace \"Add docstring\"<CR>", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("v", "<leader>af", ":AskCodeReplace \"Fix this code\"<CR>", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("v", "<leader>ar", ":AskCodeReplace \"Refactor this code\"<CR>", { noremap = true, silent = true })
+vim.keymap.set("v", "<leader>ae", ":AskCode <Plug>(AskCodeAddDocstring)")
+vim.keymap.set("v", "<leader>ar", ":AskCodeReplace \"Refactor this code\"<CR>", { noremap = true, silent = true })
 ```
 
 ## Development
