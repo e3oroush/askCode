@@ -2,6 +2,8 @@
 
 AskCode is a Neovim plugin that helps developers explore and understand codebases by connecting to CLI-based AI assistants like `gemini-cli` and `amazonq`. It acts as your in-editor guide, letting you ask context-aware questions about selected code and receive answers without leaving Neovim.
 
+![Image](https://github.com/user-attachments/assets/e5f0dadb-9bdc-4b43-8c77-15a11810a3da)
+
 ✨ **Features**
 
 - **Multi-agent support**: Choose your preferred AI backend (Gemini, AmazonQ, etc.).
