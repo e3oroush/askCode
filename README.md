@@ -128,6 +128,10 @@ Contributions are welcome! To get started with development:
 
 The project uses `mini.nvim` for its testing framework. You can find more information about it in the [mini.nvim TESTING.md](https://github.com/nvim-mini/mini.nvim/blob/main/TESTING.md) file.
 
+## Similar Projects
+
+- [gen.nvim](https://github.com/David-Kunz/gen.nvim)
+
 ## Todo
 
 - [ ] **Support Prompt Templates**: Allow users to define custom prompt templates in the configuration.
